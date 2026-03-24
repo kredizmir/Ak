@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KREDİZMİR – Şablon Paneli</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      background: #0a0e1a;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    /* HEADER */
+    .header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .header .brand {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      color: #c9a84c;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .header h1 {
+      font-size: 32px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: 1px;
+      line-height: 1.2;
+    }
+
+    .header h1 span {
+      color: #c9a84c;
+    }
+
+    .header .divider {
+      width: 60px;
+      height: 3px;
+      background: linear-gradient(90deg, #c9a84c, #f0d080);
+      margin: 18px auto 0;
+      border-radius: 2px;
+    }
+
+    /* CARDS */
+    .cards {
+      display: flex;
+      gap: 28px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 1000px;
+      width: 100%;
+    }
+
+    .card {
+      background: #111827;
+      border: 1px solid #1e2d45;
+      border-radius: 16px;
+      padding: 40px 32px;
+      width: 280px;
+      text-align: center;
+      text-decoration: none;
+      color: inherit;
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #c9a84c, #f0d080);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-6px);
+      border-color: #c9a84c44;
+      box-shadow: 0 20px 50px rgba(201, 168, 76, 0.12);
+    }
+
+    .card:hover::before {
+      opacity: 1;
+    }
+
+    .card .icon {
+      width: 64px;
+      height: 64px;
+      background: #1a2540;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      font-size: 28px;
+      transition: background 0.2s ease;
+    }
+
+    .card:hover .icon {
+      background: #c9a84c22;
+    }
+
+    .card h2 {
+      font-size: 17px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 10px;
+      letter-spacing: 0.3px;
+    }
+
+    .card p {
+      font-size: 13px;
+      color: #6b7a99;
+      line-height: 1.6;
+    }
+
+    .card .badge {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 5px 14px;
+      background: #c9a84c18;
+      border: 1px solid #c9a84c44;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #c9a84c;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .card.disabled {
+      opacity: 0.45;
+      pointer-events: none;
+    }
+
+    .card.disabled .badge {
+      background: #1e2d4522;
+      border-color: #1e2d45;
+      color: #4a5568;
+    }
+
+    /* FOOTER */
+    .footer {
+      margin-top: 60px;
+      font-size: 12px;
+      color: #2d3a52;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="brand">KREDİZMİR</div>
+    <h1>Şablon Oluşturma <span>Paneli</span></h1>
+    <div class="divider"></div>
+  </div>
+
+  <div class="cards">
+
+    <!-- Kanal Şablonu -->
+    <a class="card" href="Kanal şablon.html">
+      <div class="icon">📺</div>
+      <h2>Kanal Şablonu</h2>
+      <p>Instagram carousel gönderileri için 1080×1350px araç satış slaytları oluşturun.</p>
+      <span class="badge">Hazır</span>
+    </a>
+
+    <!-- Vergi Levhası Şablonu -->
+    <a class="card disabled" href="Vergi levhası şablon.html">
+      <div class="icon">🧾</div>
+      <h2>Vergi Levhası Şablonu</h2>
+      <p>Araç satış ilanları için vergi levhası formatında görsel oluşturun.</p>
+      <span class="badge">Yakında</span>
+    </a>
+
+    <!-- Klasik Şablon -->
+    <a class="card disabled" href="Klasik şablon.html">
+      <div class="icon">🏷️</div>
+      <h2>Klasik Şablon</h2>
+      <p>Klasik format ile araç satış ilanı görseli hazırlayın.</p>
+      <span class="badge">Yakında</span>
+    </a>
+
+  </div>
+
+  <div class="footer">KREDİZMİR &copy; 2026</div>
+
+</body>
+</html>
