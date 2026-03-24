@@ -2654,81 +2654,49 @@ function parseIlanMetni() {
   if (!txt) return;
 
   var filled = [];
+  var foundMarka = null, foundModel = null;
 
-  /* ── YIL ── */
+  /* ── 1. TÜM DEĞERLERİ TESPİT ET ── */
+
+  /* YIL */
   var yilM = txt.match(/\b(200[0-9]|201[0-9]|202[0-9])\b/);
-  if (yilM) {
-    var yilSel = document.getElementById('yil');
-    if (yilSel) { yilSel.value = yilM[1]; filled.push('Yıl: ' + yilM[1]); }
-  }
 
-  /* ── KM ── */
-  var kmM = txt.match(/(\d[\d.,]+)\s*(?:km|KM|Km)/i);
+  /* KM — nokta/virgül/boşluk ayraçlı tüm formatlar */
+  var kmM = txt.match(/(\d[\d.,\u00A0 ]+?)\s*km\b/i);
   if (!kmM) kmM = txt.match(/[Kk]ilometre[:\s]+(\d[\d.,]+)/);
-  if (kmM) {
-    var kmVal = kmM[1].replace(/[.,]/g, '').replace(/\D/g, '');
-    var kmEl  = document.getElementById('km');
-    if (kmEl) { kmEl.value = kmVal; filled.push('KM: ' + kmVal); }
-  }
+  var kmVal = kmM ? kmM[1].replace(/[\s.,\u00A0]/g, '') : null;
 
-  /* ── MARKA ── */
+  /* MARKA */
   var MARKALAR = ['FİAT','FIAT','RENAULT','DACİA','DACIA','VOLKSWAGEN','VW','FORD','TOYOTA','HYUNDAİ','HYUNDAI','OPEL','CİTROEN','CITROEN'];
   var MARKA_MAP = { 'FIAT':'FİAT','DACIA':'DACİA','HYUNDAI':'HYUNDAİ','VW':'VOLKSWAGEN','CITROEN':'CİTROEN' };
-  var foundMarka = null;
-  var txtUpper = txt.toUpperCase();
+  /* toUpperCase yerine hem i→I hem ı→I normaliz ediyoruz (Türkçe locale farkı) */
+  var txtUpper = txt.replace(/i/g,'İ').replace(/ı/g,'I').toUpperCase();
   for (var mi=0; mi<MARKALAR.length; mi++) {
-    if (txtUpper.indexOf(MARKALAR[mi]) !== -1) {
+    var mkUp = MARKALAR[mi].replace(/i/g,'İ').replace(/ı/g,'I').toUpperCase();
+    if (txtUpper.indexOf(mkUp) !== -1) {
       foundMarka = MARKA_MAP[MARKALAR[mi]] || MARKALAR[mi];
       break;
     }
   }
-  if (foundMarka) {
-    var markaEl = document.getElementById('marka');
-    if (markaEl) { markaEl.value = foundMarka; filled.push('Marka: ' + foundMarka); }
-    updateMarkaBtns();
-    renderModelChips(foundMarka);
-  }
 
-  /* ── MODEL ── */
+  /* MODEL */
   if (foundMarka && window.MARKA_MODELLER && MARKA_MODELLER[foundMarka]) {
     var modeller = MARKA_MODELLER[foundMarka];
-    var txtUp2 = txt.toUpperCase();
-    var foundModel = null;
     var foundModelLen = 0;
     for (var mmi=0; mmi<modeller.length; mmi++) {
-      var mUp = modeller[mmi].toUpperCase();
-      if (txtUp2.indexOf(mUp) !== -1 && mUp.length > foundModelLen) {
+      var mUp = modeller[mmi].replace(/i/g,'İ').replace(/ı/g,'I').toUpperCase();
+      if (txtUpper.indexOf(mUp) !== -1 && mUp.length > foundModelLen) {
         foundModel = modeller[mmi];
         foundModelLen = mUp.length;
       }
     }
-    if (foundModel) {
-      var modelEl = document.getElementById('model');
-      if (modelEl) { modelEl.value = foundModel; filled.push('Model: ' + foundModel); }
-      document.querySelectorAll('.model-chip').forEach(function(c) {
-        c.classList.toggle('active', c.textContent.trim().toUpperCase() === foundModel.toUpperCase());
-      });
-      updateMotorSecenekleri(foundMarka, foundModel);
-    }
   }
 
-  /* ── MOTOR HACMI ── */
+  /* MOTOR */
   var motorM = txt.match(/\b(0\.9|1\.0|1\.2|1\.3|1\.4|1\.5|1\.6|1\.8|2\.0|2\.2)\b/);
-  if (motorM) {
-    var motorSel = document.getElementById('motorGucu');
-    if (motorSel) {
-      if (!motorSel.value || motorSel.value !== motorM[1]) {
-        var mEl2 = document.getElementById('marka');
-        var mdEl2 = document.getElementById('model');
-        if (mEl2 && mdEl2) updateMotorSecenekleri(mEl2.value.trim().toUpperCase(), mdEl2.value.trim());
-      }
-      motorSel.value = motorM[1];
-      if (motorSel.value === motorM[1]) filled.push('Motor: ' + motorM[1]);
-      motorSel.style.opacity = '1';
-    }
-  }
 
-  /* ── YAKIT ── */
+  /* YAKIT */
+  var yakitFound = null;
   var yakitMap = [
     ['Elektrik',     /\belektrik\b/i],
     ['Hibrit',       /\bhibrit\b/i],
@@ -2738,55 +2706,89 @@ function parseIlanMetni() {
     ['Benzin',       /\bbenzin\b/i],
   ];
   for (var yi=0; yi<yakitMap.length; yi++) {
-    if (yakitMap[yi][1].test(txt)) {
-      var yakitSel = document.getElementById('yakit');
-      if (yakitSel) { yakitSel.value = yakitMap[yi][0]; filled.push('Yakıt: ' + yakitMap[yi][0]); }
-      break;
+    if (yakitMap[yi][1].test(txt)) { yakitFound = yakitMap[yi][0]; break; }
+  }
+
+  /* VİTES — "Düz Vites" de Manuel sayılır */
+  var vitesFound = null;
+  if (/\botomatik\b|\bdsg\b|\bpdk\b/i.test(txt)) vitesFound = 'Otomatik';
+  else if (/\bmanuel\b|\bdüz\s*vites\b|\bduz\s*vites\b/i.test(txt)) vitesFound = 'Manuel';
+
+  /* FİYAT — "775.000,00 TL" gibi virgüllü formatları da destekler */
+  var fiyatM = txt.match(/([\d.]+)(?:,\d+)?\s*(?:TL|₺)/i);
+  if (!fiyatM) fiyatM = txt.match(/[Ff]iyat[:\s]+([\d.]+)/);
+  var fiyatVal = fiyatM ? fiyatM[1].replace(/\./g,'') : null;
+
+  /* ── 2. UI GÜNCELLE (DOĞRU SIRAYLA) ── */
+
+  /* Yıl */
+  if (yilM) {
+    var yilSel = document.getElementById('yil');
+    if (yilSel) {
+      yilSel.value = yilM[1];
+      if (yilSel.value === yilM[1]) filled.push('Yıl: ' + yilM[1]);
     }
   }
 
-  /* ── VİTES ── */
-  if (/\botomatik\b/i.test(txt)) {
+  /* KM */
+  if (kmVal) {
+    var kmEl = document.getElementById('km');
+    if (kmEl) { kmEl.value = kmVal; filled.push('KM: ' + kmVal); }
+  }
+
+  /* Marka → buton aktif + model chip'leri render et */
+  if (foundMarka) {
+    var markaEl = document.getElementById('marka');
+    if (markaEl) { markaEl.value = foundMarka; filled.push('Marka: ' + foundMarka); }
+    updateMarkaBtns();
+  }
+
+  /* Model → chip aktif + motor seçeneklerini doldur */
+  if (foundModel) {
+    var modelEl = document.getElementById('model');
+    if (modelEl) { modelEl.value = foundModel; filled.push('Model: ' + foundModel); }
+    document.querySelectorAll('.model-chip').forEach(function(c) {
+      var chipTxt = c.textContent.trim().replace(/i/g,'İ').replace(/ı/g,'I').toUpperCase();
+      var mdUp    = foundModel.replace(/i/g,'İ').replace(/ı/g,'I').toUpperCase();
+      c.classList.toggle('active', chipTxt === mdUp);
+    });
+    if (foundMarka) updateMotorSecenekleri(foundMarka, foundModel);
+  }
+
+  /* Motor — seçenekler doldurulduktan SONRA set et */
+  if (motorM) {
+    var motorSel = document.getElementById('motorGucu');
+    if (motorSel) {
+      /* Model bilinmiyorsa tam listeyi yükle */
+      if (!foundModel && foundMarka) updateMotorSecenekleri(foundMarka, '');
+      motorSel.value = motorM[1];
+      if (motorSel.value === motorM[1]) {
+        filled.push('Motor: ' + motorM[1]);
+        motorSel.style.opacity = '1';
+        motorSel.dispatchEvent(new Event('change'));
+      }
+    }
+  }
+
+  /* Yakıt */
+  if (yakitFound) {
+    var yakitSel = document.getElementById('yakit');
+    if (yakitSel) { yakitSel.value = yakitFound; filled.push('Yakıt: ' + yakitFound); }
+  }
+
+  /* Vites */
+  if (vitesFound) {
     var vitesSel = document.getElementById('vites');
-    if (vitesSel) { vitesSel.value = 'Otomatik'; filled.push('Vites: Otomatik'); }
-  } else if (/\bmanuel\b/i.test(txt)) {
-    var vitesSel2 = document.getElementById('vites');
-    if (vitesSel2) { vitesSel2.value = 'Manuel'; filled.push('Vites: Manuel'); }
+    if (vitesSel) { vitesSel.value = vitesFound; filled.push('Vites: ' + vitesFound); }
   }
 
-  /* ── FİYAT (peşin) ── */
-  var fiyatM = txt.match(/(\d[\d.]+)\s*(?:TL|₺)/i);
-  if (!fiyatM) fiyatM = txt.match(/[Ff]iyat[:\s]+(\d[\d.]+)/);
-  if (fiyatM) {
-    var fiyatVal = fiyatM[1].replace(/\./g,'');
-    if (parseInt(fiyatVal) > 10000) {
-      var pesinEl = document.getElementById('pesin');
-      if (pesinEl) { pesinEl.value = fiyatVal; filled.push('Fiyat: ' + fiyatVal + ' ₺'); }
-    }
+  /* Fiyat */
+  if (fiyatVal && parseInt(fiyatVal) > 10000) {
+    var pesinEl = document.getElementById('pesin');
+    if (pesinEl) { pesinEl.value = fiyatVal; filled.push('Fiyat: ' + fiyatVal + ' ₺'); }
   }
 
-  /* ── DEĞİŞEN ── */
-  var degM = txt.match(/[Dd]eği[sş]en[:\s]+([^\n,;]{1,40})/);
-  if (degM) {
-    var degEl = document.getElementById('degisen');
-    if (degEl) { degEl.value = degM[1].trim(); filled.push('Değişen: ' + degM[1].trim()); }
-  }
-
-  /* ── BOYA ── */
-  var boyaM = txt.match(/[Bb]oya[:\s]+([^\n,;]{1,40})/);
-  if (boyaM) {
-    var boyaEl = document.getElementById('boya');
-    if (boyaEl) { boyaEl.value = boyaM[1].trim(); filled.push('Boya: ' + boyaM[1].trim()); }
-  }
-
-  /* ── TRAMER ── */
-  var tramerM = txt.match(/[Tt]ramer[:\s]+([^\n,;]{1,40})/);
-  if (tramerM) {
-    var tramerEl = document.getElementById('tramer');
-    if (tramerEl) { tramerEl.value = tramerM[1].trim(); filled.push('Tramer: ' + tramerM[1].trim()); }
-  }
-
-  /* ── LOG GÖSTER ── */
+  /* ── 3. LOG GÖSTER ── */
   var logEl = document.getElementById('ilanParseLog');
   if (logEl) {
     if (filled.length > 0) {
