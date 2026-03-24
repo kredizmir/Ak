@@ -1777,25 +1777,27 @@ function drawSlide2(f) {
   if (f.vites === 'Otomatik') drawOtomatikBadge(imgY);
 
   /* ── SPECS RIGHT ── */
-  var sx = imgX + imgW + 14;   /* 18 → 14 */
+  var sx = imgX + imgW + 14;
   var sw = W - sx - MARGIN;
   var sy = imgY;
-  /* Slide 2: her zaman 4 kart — degisen/boya/tramer alt panelde gösteriliyor */
+
   var specs = [
-    { label: 'KİLOMETRE', val: f.km,    icon: '📍' },
-    { label: 'YAKIT',     val: f.yakit,  icon: '⛽' },
-    { label: 'VİTES',     val: f.vites,  icon: '⚙️' },
-    { label: 'YIL',       val: f.yil,    icon: '📅' },
+    { label: 'KİLOMETRE', val: f.km    },
+    { label: 'YAKIT',     val: f.yakit },
+    { label: 'VİTES',     val: f.vites },
+    { label: 'YIL',       val: f.yil   },
   ];
 
-  var rowH = imgH / specs.length;
-  var curY = sy;
+  var rowH  = imgH / specs.length;   /* 4 kart — 503/4 ≈ 125 px */
+  var curY  = sy;
 
   specs.forEach(function(sp, i) {
-    var cardH = rowH - 6;
+    var cardH = rowH - 7;
+
+    /* Kart arka plan */
     ctx.save();
-    ctx.shadowColor  = 'rgba(0,0,0,0.3)';
-    ctx.shadowBlur   = 10;
+    ctx.shadowColor   = 'rgba(0,0,0,0.3)';
+    ctx.shadowBlur    = 10;
     ctx.shadowOffsetY = 3;
     rr(sx, curY, sw, cardH, 12);
     var cardGrad = ctx.createLinearGradient(sx, curY, sx + sw, curY);
@@ -1805,21 +1807,30 @@ function drawSlide2(f) {
     ctx.fill();
     ctx.restore();
 
+    /* Sol altın şerit */
     ctx.fillStyle = '#FFD43B';
     rr(sx, curY, 5, cardH, 3); ctx.fill();
 
-    /* Label */
-    ctx.font         = '600 15px "DM Sans", sans-serif';  /* 14 → 15 */
-    ctx.fillStyle    = 'rgba(255,212,59,0.85)';
+    /* ── İÇERİK: label + değer dikey ortalı ── */
+    var LABEL_SZ = 13;      /* etiket font boyutu */
+    var VAL_SZ   = 32;      /* değer font boyutu (max) */
+    var GAP      = 8;       /* etiket-değer arası */
+    var totalH   = LABEL_SZ + GAP + VAL_SZ;
+    var blockTop = curY + (cardH - totalH) / 2;
+
+    /* Etiket */
+    ctx.font         = '700 ' + LABEL_SZ + 'px "DM Sans", sans-serif';
+    ctx.fillStyle    = 'rgba(255,212,59,0.90)';
     ctx.textAlign    = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText(sp.label, sx + 18, curY + 11);
+    ctx.fillText(sp.label, sx + 18, blockTop);
 
-    /* Value */
-    fitText(sp.val || '—', '700 __S__px "DM Sans", sans-serif', sw - 28, 36);  /* 34 → 36 */
+    /* Değer — genişliğe göre küçülür ama max VAL_SZ */
+    var valText = sp.val || '—';
+    fitText(valText, '800 __S__px "DM Sans", sans-serif', sw - 32, VAL_SZ);
     ctx.fillStyle    = '#FFFFFF';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText(sp.val || '—', sx + 18, curY + cardH - 10);
+    ctx.textBaseline = 'top';
+    ctx.fillText(valText, sx + 18, blockTop + LABEL_SZ + GAP);
 
     curY += rowH;
   });
