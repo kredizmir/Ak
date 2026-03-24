@@ -994,92 +994,159 @@ function parseText() {
     return;
   }
 
-  const lines = raw.split(/[\n\r]+/).map(l => l.trim()).filter(l => l);
-  const text  = raw.toLowerCase();
-  const result = {};
+  const G = id => document.getElementById(id);
 
-  // ── BAŞLIK: İlk uzun satır büyük ihtimalle araç adı ──
-  // Sahibinden başlığı genelde ilk anlamlı satır
-  for (const line of lines) {
-    if (line.length > 8 && line.length < 80 && /[a-zA-ZğüşöçıĞÜŞÖÇİ]/.test(line)) {
-      // Fiyat satırı değilse başlık say
-      if (!/^\d[\d.,\s]*(tl|₺|peşin|peşinat)?$/i.test(line)) {
-        result.title = line.toUpperCase();
-        break;
-      }
-    }
-  }
+  /* Türkçe locale farkından bağımsız normalize (i→İ, ı→I) */
+  const txtNorm = raw.replace(/i/g,'İ').replace(/ı/g,'I').toUpperCase();
+  const textLow = raw.toLowerCase();
 
-  // ── KM: "123.456 km" veya "kilometre" anahtar kelimesi ──
-  const kmPatterns = [
-    /kilometre[:\s]+([\d.,]+)/i,
-    /([\d.,]+)\s*km\b/i,
-    /\b(\d{2,3}[.,]\d{3})\s*km/i,
+  let foundYil = null, foundMarka = null, foundModel = null, foundMotor = null;
+  let kmVal = null, yakitFound = null, vitesFound = null, priceVal = null;
+  const filled = [];
+
+  /* ── YIL ── */
+  const yilM = raw.match(/\b(200[0-9]|201[0-9]|202[0-9])\b/);
+  if (yilM) foundYil = yilM[1];
+
+  /* ── KM — nokta/virgül/boşluk ayraçlı tüm formatlar ── */
+  const kmRx = [
+    /kilometre[:\s]+([\d.,\u00A0 ]+)/i,
+    /([\d.,\u00A0 ]+?)\s*km\b/i,
   ];
-  for (const rx of kmPatterns) {
+  for (const rx of kmRx) {
     const m = raw.match(rx);
     if (m) {
-      const num = m[1].replace(/[.,]/g, '').replace(/\D/g,'');
-      if (num && num.length >= 4) {
-        result.km = parseInt(num).toLocaleString('tr-TR').replace(/,/g,'.') + ' KM';
+      const num = m[1].replace(/[\s.,\u00A0]/g,'');
+      if (num && num.length >= 4) { kmVal = num; break; }
+    }
+  }
+
+  /* ── MARKA ── */
+  const MARKALAR = ['FİAT','FIAT','RENAULT','DACİA','DACIA','VOLKSWAGEN','VW','FORD','TOYOTA','HYUNDAİ','HYUNDAI','OPEL','CİTROEN','CITROEN'];
+  const MARKA_MAP = {'FIAT':'FİAT','DACIA':'DACİA','HYUNDAI':'HYUNDAİ','VW':'VOLKSWAGEN','CITROEN':'CİTROEN'};
+  for (const mk of MARKALAR) {
+    const mkN = mk.replace(/i/g,'İ').replace(/ı/g,'I').toUpperCase();
+    if (txtNorm.indexOf(mkN) !== -1) { foundMarka = MARKA_MAP[mk] || mk; break; }
+  }
+
+  /* ── MODEL ── */
+  const MODELLER = {
+    'FİAT':      ['Egea','Linea','Doblo','Fiorino','Punto','Bravo','Tipo','Panda'],
+    'RENAULT':   ['Clio','Megane','Symbol','Taliant','Fluence','Laguna','Kadjar','Captur','Scenic'],
+    'DACİA':     ['Sandero Stepway','Sandero','Duster','Logan','Lodgy','Dokker'],
+    'VOLKSWAGEN':['Polo','Golf','Passat','Jetta','Tiguan','Caddy','T-Roc'],
+    'FORD':      ['Tourneo Courier','Focus','Fiesta','Mondeo','Kuga','EcoSport','Fusion','C-Max'],
+    'TOYOTA':    ['Land Cruiser','Corolla','C-HR','Yaris','Auris','RAV4','Hilux','Camry'],
+    'HYUNDAİ':   ['Accent Blue','Santa Fe','Elantra','Tucson','Kona','i10','i20','i30'],
+    'OPEL':      ['Crossland','Insignia','Mokka','Vectra','Zafira','Corsa','Astra','Combo'],
+    'CİTROEN':   ['C-Elysée','Berlingo','Jumpy','C3','C4','C5'],
+  };
+  if (foundMarka && MODELLER[foundMarka]) {
+    let bestLen = 0;
+    for (const m of MODELLER[foundMarka]) {
+      const mN = m.replace(/i/g,'İ').replace(/ı/g,'I').toUpperCase();
+      if (txtNorm.indexOf(mN) !== -1 && mN.length > bestLen) {
+        foundModel = m; bestLen = mN.length;
+      }
+    }
+  }
+
+  /* ── MOTOR ── */
+  const motorM = raw.match(/\b(0\.9|1\.0|1\.2|1\.3|1\.4|1\.5|1\.6|1\.8|2\.0|2\.2)\b/);
+  if (motorM) foundMotor = motorM[1];
+
+  /* ── YAKIT ── */
+  const FUEL_WORDS = [
+    ['dizel','Dizel'],['diesel','Dizel'],
+    ['benzin & lpg','Benzin & LPG'],['benzin+lpg','Benzin & LPG'],
+    ['hibrit','Hibrit'],['hybrid','Hibrit'],
+    ['elektrik','Elektrik'],['electric','Elektrik'],
+    ['lpg','LPG'],
+    ['benzin','Benzin'],['gasoline','Benzin'],
+  ];
+  for (const [kw, val] of FUEL_WORDS) {
+    if (textLow.includes(kw)) { yakitFound = val; break; }
+  }
+
+  /* ── VİTES — "Düz Vites", "DSG", "PDK" de desteklenir ── */
+  const TRANS_WORDS = [
+    ['yarı otomatik','Yarı Otomatik'],
+    ['dsg','Otomatik'],['pdk','Otomatik'],
+    ['otomatik','Otomatik'],['automatic','Otomatik'],
+    ['manuel','Manuel'],['düz vites','Manuel'],['manual','Manuel'],
+  ];
+  for (const [kw, val] of TRANS_WORDS) {
+    if (textLow.includes(kw)) { vitesFound = val; break; }
+  }
+
+  /* ── FİYAT — "775.000,00 TL" formatı da dahil ── */
+  const fiyatM = raw.match(/([\d.]+)(?:,\d+)?\s*(?:TL|₺)/i);
+  if (fiyatM) {
+    const n = parseInt(fiyatM[1].replace(/\./g,''));
+    if (n > 10000) priceVal = n;
+  }
+  if (!priceVal) {
+    let maxP = 0;
+    for (const m of raw.matchAll(/([\d]{3}[.,][\d]{3,}(?:[.,]\d+)*)/g)) {
+      const n = parseInt(m[1].replace(/[.,]/g,''));
+      if (n > 50000 && n > maxP) maxP = n;
+    }
+    if (maxP > 0) priceVal = maxP;
+  }
+
+  /* ── UI GÜNCELLE ── */
+
+  /* Model alanı: MARKA + MODEL + MOTOR + YIL birleşik */
+  const modelParts = [];
+  if (foundMarka) modelParts.push(foundMarka);
+  if (foundModel) modelParts.push(foundModel.toUpperCase());
+  if (foundMotor) modelParts.push(foundMotor);
+  if (foundYil)   modelParts.push(foundYil);
+
+  if (modelParts.length > 0) {
+    G('model').value = modelParts.join(' ');
+    if (foundYil)   filled.push('Yıl: '   + foundYil);
+    if (foundMarka) filled.push('Marka: '  + foundMarka);
+    if (foundModel) filled.push('Model: '  + foundModel);
+    if (foundMotor) filled.push('Motor: '  + foundMotor);
+  } else {
+    /* Fallback: sahibinden başlığı (ilk anlamlı satır) */
+    const rawLines = raw.split(/[\n\r]+/).map(l => l.trim()).filter(l => l);
+    for (const line of rawLines) {
+      if (line.length > 8 && line.length < 80 && /[a-zA-ZğüşöçıĞÜŞÖÇİ]/.test(line)
+          && !/^\d[\d.,\s]*(tl|₺)?$/i.test(line)) {
+        G('model').value = line.toUpperCase();
+        filled.push('Model: ' + line.toUpperCase());
         break;
       }
     }
   }
 
-  // ── YAKIT ──
-  const FUEL_WORDS = [
-    ['dizel','Dizel'], ['diesel','Dizel'],
-    ['benzin & lpg','Benzin & LPG'], ['benzin+lpg','Benzin & LPG'],
-    ['benzin','Benzin'], ['gasoline','Benzin'],
-    ['lpg','LPG'],
-    ['hibrit','Hibrit'], ['hybrid','Hibrit'],
-    ['elektrik','Elektrik'], ['electric','Elektrik'],
-  ];
-  for (const [kw, val] of FUEL_WORDS) {
-    if (text.includes(kw)) { result.fuel = val; break; }
+  if (kmVal) {
+    G('km').value = parseInt(kmVal).toLocaleString('tr-TR').replace(/,/g,'.') + ' KM';
+    filled.push('KM: ' + G('km').value);
   }
 
-  // ── VİTES ──
-  const TRANS_WORDS = [
-    ['yarı otomatik','Yarı Otomatik'],
-    ['otomatik','Otomatik'], ['automatic','Otomatik'],
-    ['manuel','Manuel'], ['düz vites','Manuel'], ['manual','Manuel'],
-  ];
-  for (const [kw, val] of TRANS_WORDS) {
-    if (text.includes(kw)) { result.trans = val; break; }
-  }
+  if (yakitFound) { G('yakit').value = yakitFound; filled.push('Yakıt: ' + yakitFound); }
+  if (vitesFound) { G('vites').value = vitesFound; filled.push('Vites: ' + vitesFound); }
 
-  // ── FİYAT: büyük sayılar (100.000+) ──
-  const priceMatches = [...raw.matchAll(/([\d]{3}[.,][\d]{3,}(?:[.,]\d+)*)/g)];
-  let maxPrice = 0;
-  for (const m of priceMatches) {
-    const num = parseInt(m[1].replace(/[.,]/g,''));
-    if (num > 50000 && num > maxPrice) maxPrice = num;
+  if (priceVal) {
+    G('pesin').value = priceVal.toLocaleString('tr-TR').replace(/,/g,'.');
+    filled.push('Fiyat: ' + G('pesin').value + ' ₺');
   }
-  if (maxPrice > 0) result.price = maxPrice;
-
-  // ── FORMA DOLDUR ──
-  const G = id => document.getElementById(id);
-  let filled = [];
-
-  if (result.title) { G('model').value = result.title; filled.push('✓ Model'); }
-  if (result.km)    { G('km').value    = result.km;    filled.push('✓ KM'); }
-  if (result.price) {
-    G('pesin').value = result.price.toLocaleString('tr-TR').replace(/,/g,'.');
-    filled.push('✓ Fiyat');
-  }
-  if (result.fuel)  { G('yakit').value = result.fuel;  filled.push('✓ Yakıt'); }
-  if (result.trans) { G('vites').value = result.trans; filled.push('✓ Vites'); }
 
   draw();
   saveMemory();
 
+  const sahEl = document.getElementById('sahStatus');
   if (filled.length === 0) {
     setSahStatus('error', 'Bilgi bulunamadı. Sahibinden sayfasından daha fazla metin kopyalamayı deneyin.');
   } else {
-    setSahStatus('success', 'Aktarıldı: ' + filled.join('  '));
-    // Textarea'yı temizle
+    sahEl.style.display  = 'block';
+    sahEl.style.background = 'rgba(20,100,20,0.15)';
+    sahEl.style.border   = '1px solid rgba(40,160,40,0.3)';
+    sahEl.style.color    = '#6ddd6d';
+    sahEl.innerHTML = '<b>✅ Doldurulan alanlar:</b><br>' + filled.join('<br>');
     G('pasteText').value = '';
   }
 }
