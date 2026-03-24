@@ -219,6 +219,83 @@ select option{background:#0d1e30;color:#eef2f7;}
   text-align:center;margin-top:16px;
   letter-spacing:.5px;
 }
+
+    /* Autocomplete dropdown */
+    .search-wrap { position: relative; }
+    .ac-list {
+      position: absolute;
+      top: 100%;
+      left: 0; right: 0;
+      background: #1a2540;
+      border: 1px solid #c9a84c44;
+      border-radius: 10px;
+      margin-top: 4px;
+      padding: 4px 0;
+      list-style: none;
+      z-index: 100;
+      display: none;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .ac-list li {
+      padding: 10px 16px;
+      color: #e2e8f0;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .ac-list li:hover { background: #c9a84c22; color: #c9a84c; }
+
+    /* Popular brands */
+    .popular-section {
+      margin-bottom: 24px;
+    }
+    .popular-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #c9a84c;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .popular-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .chip {
+      background: #1a2540;
+      border: 1px solid #2a3a5a;
+      border-radius: 20px;
+      color: #a0aec0;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      letter-spacing: 0.3px;
+    }
+    .chip:hover, .chip.active {
+      background: #c9a84c22;
+      border-color: #c9a84c;
+      color: #c9a84c;
+    }
+
+    /* Manuel giriş */
+    .manuel-field label { color: #a0aec0; }
+    .manuel-hint { font-size: 11px; color: #4a5568; font-weight: 400; }
+    .manuel-field input {
+      width: 100%;
+      background: #0d1525;
+      border: 1px solid #1e2d45;
+      border-radius: 10px;
+      color: #e2e8f0;
+      font-size: 14px;
+      padding: 12px 16px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .manuel-field input:focus { border-color: #c9a84c66; }
+    .manuel-field input::placeholder { color: #2d3a52; }
 </style>
 </head>
 <body>
@@ -240,6 +317,42 @@ select option{background:#0d1e30;color:#eef2f7;}
 
   <div id="appContent" style="display:none;">
 
+    <!-- Popüler Markalar -->
+    <div class="popular-section">
+      <div class="popular-title">Popüler Markalar</div>
+      <div class="popular-chips" id="popularChips">
+        <button class="chip" data-marka="FIAT">FIAT</button>
+        <button class="chip" data-marka="RENAULT">RENAULT</button>
+        <button class="chip" data-marka="VOLKSWAGEN">VOLKSWAGEN</button>
+        <button class="chip" data-marka="TOYOTA">TOYOTA</button>
+        <button class="chip" data-marka="FORD">FORD</button>
+        <button class="chip" data-marka="HYUNDAI">HYUNDAI</button>
+        <button class="chip" data-marka="BMW">BMW</button>
+        <button class="chip" data-marka="MERCEDES">MERCEDES</button>
+        <button class="chip" data-marka="OPEL">OPEL</button>
+        <button class="chip" data-marka="DACIA">DACIA</button>
+        <button class="chip" data-marka="PEUGEOT">PEUGEOT</button>
+        <button class="chip" data-marka="CITROEN">CITROEN</button>
+        <button class="chip" data-marka="KIA">KIA</button>
+        <button class="chip" data-marka="SKODA">SKODA</button>
+        <button class="chip" data-marka="SEAT">SEAT</button>
+        <button class="chip" data-marka="CUPRA">CUPRA</button>
+        <button class="chip" data-marka="AUDI">AUDI</button>
+        <button class="chip" data-marka="HONDA">HONDA</button>
+        <button class="chip" data-marka="NISSAN">NISSAN</button>
+        <button class="chip" data-marka="TOFAS-FIAT">TOFAS-FIAT</button>
+        <button class="chip" data-marka="TOGG">TOGG</button>
+        <button class="chip" data-marka="SUZUKI">SUZUKI</button>
+        <button class="chip" data-marka="MITSUBISHI">MITSUBISHI</button>
+        <button class="chip" data-marka="VOLVO">VOLVO</button>
+        <button class="chip" data-marka="TESLA">TESLA</button>
+        <button class="chip" data-marka="LAND ROVER">LAND ROVER</button>
+        <button class="chip" data-marka="PORSCHE">PORSCHE</button>
+        <button class="chip" data-marka="LEXUS">LEXUS</button>
+        <button class="chip" data-marka="MG">MG</button>
+        <button class="chip" data-marka="BYD">BYD</button>
+      </div>
+    </div>
     <div class="form-section">
       <div class="form-title">Araç Bilgileri</div>
 
@@ -252,6 +365,7 @@ select option{background:#0d1e30;color:#eef2f7;}
         <select id="markaSel" style="margin-top:8px;display:none;">
           <option value="">— Marka seçin —</option>
         </select>
+        <ul class="ac-list" id="acList"></ul>
       </div>
 
       <div class="field">
@@ -259,6 +373,13 @@ select option{background:#0d1e30;color:#eef2f7;}
         <select id="tipSel" disabled>
           <option value="">— Önce marka seçin —</option>
         </select>
+      </div>
+
+      <!-- Manuel Giriş -->
+      <div class="field manuel-field">
+        <label>Sonuçta Gösterilecek İsim <span class="manuel-hint">(isteğe bağlı)</span></label>
+        <input type="text" id="manuelMarka" placeholder="Marka (örn: BMW)" autocomplete="off">
+        <input type="text" id="manuelModel" placeholder="Model (örn: 320i Executive)" autocomplete="off" style="margin-top:8px;">
       </div>
 
       <div class="field">
@@ -313,12 +434,37 @@ function init() {
 
   buildMarkaDropdown();
   buildYearPills();
+  setupPopularChips();
   setupMarkaSearch();
+}
+
+const EXCLUDE_BRANDS = new Set([
+  // Karavan / Motorhome
+  'ADRIA','CARTHAGO','ETRUSCO','HYMER','HOBBY','KNAUS','WEINSBERG','NIEVE',
+  // Otobüs / Koç
+  'BOZANKAYA','BREDAMENARIBUS','GULERYUZ','IRIZAR','ISOBUS','MENARINIBUS',
+  'NEOPLAN','OTOKAR/MAGIRUS','OTOYOL\\IVECO\\FIAT','SETRA','SOLARIS','TEMSA','KARSAN',
+  // Vinç / İnşaat makinesi
+  'GROVE','TADANO FAUN','ZOOMLION','SANY','PIMAKINA','MULTICAR','SCHMIDT',
+  // Motorsiklet / Scooter
+  'MOTORSIKLET','KTM','PIAGGIO',
+  // Ağır kamyon
+  'KAMAZ','KENWORTH','MAN','SCANIA','SINOTRUK','TATRA','DAF','AVIA','BMC',
+  'DONG FENG','DFM','DFSK','FOTON','GAZ','MAZ','TURKAR','TURKKAR','VEICOLI','WMA',
+  // Zirai / Tarım
+  'ZIRAI TRAKTOR',
+  // Özel / Endüstriyel
+  'ALKE','CENNTRO','EMT','EVEASY','FEST','HABAS','HOTOMOBIL','KOMI','MILLER',
+  'PILOTCAR','TEZELLER','TENAX','TCV','DEVINCI','FARIZON AUTO','ASTRA',
+]);
+
+function getFilteredMarkas() {
+  return Object.keys(DB).filter(m => !EXCLUDE_BRANDS.has(m)).sort();
 }
 
 function buildMarkaDropdown() {
   const sel = document.getElementById('markaSel');
-  Object.keys(DB).sort().forEach(m => {
+  getFilteredMarkas().forEach(m => {
     const o = document.createElement('option');
     o.value = m;
     o.textContent = m;
@@ -332,39 +478,61 @@ function buildMarkaDropdown() {
 function setupMarkaSearch() {
   const input = document.getElementById('markaSearch');
   const sel = document.getElementById('markaSel');
-  const allMarkas = Object.keys(DB).sort();
+  const allMarkas = getFilteredMarkas();
+  const acList = document.getElementById('acList');
 
   input.addEventListener('input', () => {
     const q = input.value.toUpperCase().trim();
-    if (!q) {
-      onMarkaChange('');
-      return;
-    }
-    const match = allMarkas.find(m => m.toUpperCase() === q) ||
-                  allMarkas.find(m => m.toUpperCase().startsWith(q));
-    if (match) {
-      input.style.borderColor = 'var(--accent)';
-      onMarkaChange(match);
-    } else {
-      input.style.borderColor = '';
-      onMarkaChange('');
-    }
+    acList.innerHTML = '';
+    if (!q) { acList.style.display='none'; onMarkaChange(''); return; }
+    const matches = allMarkas.filter(m => m.toUpperCase().includes(q));
+    if (matches.length === 0) { acList.style.display='none'; return; }
+    matches.slice(0, 12).forEach(m => {
+      const li = document.createElement('li');
+      li.textContent = m;
+      li.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        acList.style.display = 'none';
+        onMarkaChange(m);
+      });
+      acList.appendChild(li);
+    });
+    acList.style.display = 'block';
   });
 
-  // Also show dropdown list approach: clicking focuses suggestions
+  input.addEventListener('blur', () => {
+    setTimeout(() => { acList.style.display = 'none'; }, 150);
+  });
+
   input.addEventListener('focus', () => {
-    const q = input.value.toUpperCase().trim();
-    if (!q && selectedMarka) {
-      input.value = selectedMarka;
-    }
+    if (input.value.trim()) input.dispatchEvent(new Event('input'));
   });
 }
+function setupPopularChips() {
+  document.querySelectorAll('.chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const marka = btn.dataset.marka;
+      document.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      onMarkaChange(marka);
+      document.getElementById('tipSel').scrollIntoView({behavior:'smooth', block:'nearest'});
+    });
+  });
+}
+
 
 function onMarkaChange(marka) {
   selectedMarka = marka;
   selectedTip = '';
   document.getElementById('markaSel').value = marka;
   document.getElementById('markaSearch').value = marka;
+  document.getElementById('acList').style.display = 'none';
+  document.querySelectorAll('.chip').forEach(b => {
+    b.classList.toggle('active', b.dataset.marka === marka);
+  });
+  if (marka) {
+    document.getElementById('manuelMarka').value = marka;
+  }
   buildTipDropdown(marka);
   checkBtn();
   hideResult();
@@ -393,6 +561,7 @@ function buildTipDropdown(marka) {
   });
   sel.onchange = () => {
     selectedTip = sel.value;
+    document.getElementById('manuelModel').value = sel.value;
     checkBtn();
     hideResult();
     updateAvailableYears();
@@ -447,21 +616,22 @@ function hideResult() {
 }
 
 document.getElementById('searchBtn').addEventListener('click', () => {
+  const displayMarka = document.getElementById('manuelMarka').value.trim() || selectedMarka;
+  const displayModel = document.getElementById('manuelModel').value.trim() || selectedTip;
   const item = DB[selectedMarka]?.find(x => x.t === selectedTip);
   const value = item?.v?.[selectedYear];
   if (value) {
-    document.getElementById('resMarka').textContent = selectedMarka;
-    document.getElementById('resTip').textContent = selectedTip;
+    document.getElementById('resMarka').textContent = displayMarka;
+    document.getElementById('resTip').textContent = displayModel;
     document.getElementById('resYear').textContent = selectedYear + ' Model';
-    document.getElementById('resValue').textContent =
-      value.toLocaleString('tr-TR') + ' ₺';
+    document.getElementById('resValue').textContent = value.toLocaleString('tr-TR') + ' ₺';
     document.getElementById('resultCard').classList.add('show');
     document.getElementById('notFoundEl').classList.remove('show');
   } else {
     document.getElementById('resultCard').classList.remove('show');
     document.getElementById('notFoundEl').classList.add('show');
   }
-  document.getElementById('resultCard').scrollIntoView({behavior:'smooth',block:'nearest'});
+  document.getElementById('resultCard').scrollIntoView({behavior:'smooth', block:'nearest'});
 });
 
 loadData();
