@@ -542,7 +542,7 @@ function setupUnifiedSearch() {
       li.textContent = c.marka + ' — ' + c.tip;
       const pick = () => selectVehicle(c.marka, c.tip);
       li.addEventListener('mousedown', e => { e.preventDefault(); pick(); });
-      li.addEventListener('touchstart', e => { e.preventDefault(); pick(); }, {passive: false});
+      li.addEventListener('touchend', e => { e.preventDefault(); pick(); }, {passive: false});
       acList.appendChild(li);
     });
     acList.style.display = 'block';
@@ -605,24 +605,9 @@ function selectVehicle(marka, tip) {
   document.getElementById('selectedBar').style.display = 'flex';
   document.getElementById('yearField').style.display = 'block';
   document.querySelectorAll('.chip').forEach(b => b.classList.toggle('active', b.dataset.marka === marka));
-  updateAvailableYears();
-  // Otomatik en son yılı seç
-  const item = DB[marka]?.find(x => x.t === tip);
-  if (item) {
-    const availYears = Object.keys(item.v).map(Number).sort((a, b) => b - a);
-    if (availYears.length > 0) {
-      selectedYear = String(availYears[0]);
-      document.querySelectorAll('.year-pill').forEach(p => {
-        p.classList.toggle('active', p.dataset.year === selectedYear);
-      });
-      showResult();
-      setTimeout(() => document.getElementById('resultCard').scrollIntoView({behavior: 'smooth', block: 'nearest'}), 120);
-      return;
-    }
-  }
   document.querySelectorAll('.year-pill').forEach(p => p.classList.remove('active'));
+  updateAvailableYears();
   hideResult();
-  setTimeout(() => document.getElementById('yearField').scrollIntoView({behavior:'smooth', block:'nearest'}), 100);
 }
 
 function clearSelection() {
@@ -692,7 +677,7 @@ function showResult() {
     document.getElementById('resultCard').classList.remove('show');
     document.getElementById('notFoundEl').classList.add('show');
   }
-  setTimeout(() => document.getElementById('resultCard').scrollIntoView({behavior:'smooth', block:'nearest'}), 50);
+
 }
 
 function copyResult() {
