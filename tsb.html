@@ -296,6 +296,50 @@ select option{background:#0d1e30;color:#eef2f7;}
     }
     .manuel-field input:focus { border-color: #c9a84c66; }
     .manuel-field input::placeholder { color: #2d3a52; }
+
+/* Selected vehicle bar */
+.selected-bar{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  background:var(--accent-dim);border:1px solid rgba(201,168,76,.3);
+  border-radius:10px;padding:12px 16px;margin-bottom:4px;
+}
+.selected-bar-info{flex:1;min-width:0;}
+.selected-bar-sub{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;}
+.selected-bar-text{font-weight:700;color:var(--text);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.clear-btn{
+  background:none;border:1px solid var(--border);color:var(--muted);
+  border-radius:6px;font-size:14px;cursor:pointer;padding:4px 10px;flex-shrink:0;line-height:1;
+}
+.clear-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+/* Copy area */
+.copy-area{margin-top:20px;border-top:1px solid var(--border);padding-top:16px;}
+.copy-row{display:flex;gap:8px;}
+.copy-input{
+  flex:1;background:var(--card2);border:1px solid var(--border);
+  border-radius:8px;color:var(--text);font-size:12px;
+  padding:10px 12px;outline:none;font-family:monospace;min-width:0;
+  cursor:text;
+}
+.copy-btn{
+  background:var(--accent);color:#060d18;border:none;
+  border-radius:8px;padding:10px 18px;font-size:13px;
+  font-weight:700;cursor:pointer;white-space:nowrap;
+  transition:opacity .2s;flex-shrink:0;
+}
+.copy-btn:active{opacity:.7;}
+.copy-ok{font-size:12px;color:#4ade80;margin-top:6px;display:none;text-align:center;letter-spacing:.5px;}
+
+/* Mobile improvements */
+@media(max-width:480px){
+  .main{padding:14px 10px;}
+  .form-section{padding:14px;}
+  .year-pill{padding:10px 14px;font-size:14px;}
+  .chip{padding:8px 12px;font-size:12px;}
+  .result-value{font-size:28px;}
+  .ac-list li{padding:13px 16px;font-size:15px;}
+  .popular-chips{gap:6px;}
+}
 </style>
 </head>
 <body>
@@ -354,40 +398,38 @@ select option{background:#0d1e30;color:#eef2f7;}
       </div>
     </div>
     <div class="form-section">
-      <div class="form-title">Araç Bilgileri</div>
+      <div class="form-title">Araç Sorgula</div>
 
+      <!-- Birleşik arama -->
       <div class="field">
-        <label>Marka</label>
+        <label>Marka &amp; Model Yazın</label>
         <div class="search-wrap">
           <span class="search-icon">🔍</span>
-          <input type="text" id="markaSearch" placeholder="Marka ara veya seç…" autocomplete="off" autocorrect="off" spellcheck="false">
+          <input type="text" id="unifiedSearch" placeholder="örn: BMW 320i, Dacia Sandero, FIAT Egea…" autocomplete="off" autocorrect="off" spellcheck="false" inputmode="search">
         </div>
-        <select id="markaSel" style="margin-top:8px;display:none;">
-          <option value="">— Marka seçin —</option>
-        </select>
         <ul class="ac-list" id="acList"></ul>
       </div>
 
-      <div class="field">
-        <label>Model / Tip</label>
-        <select id="tipSel" disabled>
-          <option value="">— Önce marka seçin —</option>
-        </select>
+      <!-- Seçili araç -->
+      <div id="selectedBar" style="display:none;" class="selected-bar">
+        <div class="selected-bar-info">
+          <div class="selected-bar-sub">Seçili Araç</div>
+          <div class="selected-bar-text" id="selectedBarText"></div>
+        </div>
+        <button onclick="clearSelection()" class="clear-btn" aria-label="Temizle">✕</button>
       </div>
 
-      <!-- Manuel Giriş -->
-      <div class="field manuel-field">
-        <label>Sonuçta Gösterilecek İsim <span class="manuel-hint">(isteğe bağlı)</span></label>
-        <input type="text" id="manuelMarka" placeholder="Marka (örn: BMW)" autocomplete="off">
-        <input type="text" id="manuelModel" placeholder="Model (örn: 320i Executive)" autocomplete="off" style="margin-top:8px;">
-      </div>
-
-      <div class="field">
-        <label>Model Yılı</label>
+      <!-- Yıl seçimi -->
+      <div class="field" id="yearField" style="display:none;">
+        <label>Model Yılı Seçin</label>
         <div class="year-pills" id="yearPills"></div>
       </div>
 
-      <button class="search-btn" id="searchBtn" disabled>Kasko Değerini Göster</button>
+      <!-- Compat hidden -->
+      <select id="markaSel" style="display:none;"></select>
+      <select id="tipSel" style="display:none;"></select>
+      <input type="hidden" id="manuelMarka">
+      <input type="hidden" id="manuelModel">
     </div>
 
     <div class="result-card" id="resultCard">
@@ -399,6 +441,14 @@ select option{background:#0d1e30;color:#eef2f7;}
       <div class="result-value-label">TSB Kasko Referans Değeri</div>
       <div class="result-value" id="resValue"></div>
       <div class="result-value-sub">Türkiye Sigorta Birliği — Mart 2026</div>
+      <div class="copy-area">
+        <div class="result-value-label" style="margin-bottom:8px;">Kopyala</div>
+        <div class="copy-row">
+          <input type="text" class="copy-input" id="copyInput" readonly>
+          <button class="copy-btn" id="copyBtn" onclick="copyResult()">Kopyala</button>
+        </div>
+        <div class="copy-ok" id="copyOk">Kopyalandı!</div>
+      </div>
     </div>
 
     <div class="not-found" id="notFoundEl">
@@ -432,10 +482,9 @@ function init() {
   document.getElementById('infoBar').textContent =
     `Mart 2026 • ${Object.keys(DB).length} marka • ${total.toLocaleString('tr-TR')} model`;
 
-  buildMarkaDropdown();
   buildYearPills();
+  setupUnifiedSearch();
   setupPopularChips();
-  setupMarkaSearch();
 }
 
 const EXCLUDE_BRANDS = new Set([
@@ -462,110 +511,75 @@ function getFilteredMarkas() {
   return Object.keys(DB).filter(m => !EXCLUDE_BRANDS.has(m)).sort();
 }
 
-function buildMarkaDropdown() {
-  const sel = document.getElementById('markaSel');
-  getFilteredMarkas().forEach(m => {
-    const o = document.createElement('option');
-    o.value = m;
-    o.textContent = m;
-    sel.appendChild(o);
-  });
-  sel.addEventListener('change', () => {
-    onMarkaChange(sel.value);
-  });
-}
-
-function setupMarkaSearch() {
-  const input = document.getElementById('markaSearch');
-  const sel = document.getElementById('markaSel');
-  const allMarkas = getFilteredMarkas();
+function setupUnifiedSearch() {
+  const input = document.getElementById('unifiedSearch');
   const acList = document.getElementById('acList');
-
+  const allCombos = [];
+  getFilteredMarkas().forEach(marka => {
+    (DB[marka] || []).forEach(item => {
+      allCombos.push({ marka, tip: item.t, label: (marka + ' ' + item.t).toUpperCase() });
+    });
+  });
   input.addEventListener('input', () => {
-    const q = input.value.toUpperCase().trim();
+    const q = input.value.trim().toUpperCase();
     acList.innerHTML = '';
-    if (!q) { acList.style.display='none'; onMarkaChange(''); return; }
-    const matches = allMarkas.filter(m => m.toUpperCase().includes(q));
-    if (matches.length === 0) { acList.style.display='none'; return; }
-    matches.slice(0, 12).forEach(m => {
+    if (!q) { acList.style.display = 'none'; return; }
+    const matches = allCombos.filter(c => c.label.includes(q));
+    if (matches.length === 0) { acList.style.display = 'none'; return; }
+    matches.slice(0, 15).forEach(c => {
       const li = document.createElement('li');
-      li.textContent = m;
-      li.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        acList.style.display = 'none';
-        onMarkaChange(m);
-      });
+      li.textContent = c.marka + ' — ' + c.tip;
+      const pick = () => selectVehicle(c.marka, c.tip);
+      li.addEventListener('mousedown', e => { e.preventDefault(); pick(); });
+      li.addEventListener('touchstart', e => { e.preventDefault(); pick(); }, {passive:false});
       acList.appendChild(li);
     });
     acList.style.display = 'block';
   });
-
-  input.addEventListener('blur', () => {
-    setTimeout(() => { acList.style.display = 'none'; }, 150);
-  });
-
-  input.addEventListener('focus', () => {
-    if (input.value.trim()) input.dispatchEvent(new Event('input'));
-  });
+  input.addEventListener('blur', () => { setTimeout(() => { acList.style.display = 'none'; }, 200); });
+  input.addEventListener('focus', () => { if (input.value.trim()) input.dispatchEvent(new Event('input')); });
 }
+
 function setupPopularChips() {
   document.querySelectorAll('.chip').forEach(btn => {
     btn.addEventListener('click', () => {
-      const marka = btn.dataset.marka;
       document.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      onMarkaChange(marka);
-      document.getElementById('tipSel').scrollIntoView({behavior:'smooth', block:'nearest'});
+      const input = document.getElementById('unifiedSearch');
+      input.value = btn.dataset.marka + ' ';
+      input.focus();
+      input.dispatchEvent(new Event('input'));
     });
   });
 }
 
 
-function onMarkaChange(marka) {
+function selectVehicle(marka, tip) {
   selectedMarka = marka;
-  selectedTip = '';
-  document.getElementById('markaSel').value = marka;
-  document.getElementById('markaSearch').value = marka;
+  selectedTip = tip;
+  selectedYear = '';
+  document.getElementById('unifiedSearch').value = marka + ' — ' + tip;
   document.getElementById('acList').style.display = 'none';
-  document.querySelectorAll('.chip').forEach(b => {
-    b.classList.toggle('active', b.dataset.marka === marka);
-  });
-  if (marka) {
-    document.getElementById('manuelMarka').value = marka;
-  }
-  buildTipDropdown(marka);
-  checkBtn();
+  document.getElementById('selectedBarText').textContent = marka + ' — ' + tip;
+  document.getElementById('selectedBar').style.display = 'flex';
+  document.getElementById('yearField').style.display = 'block';
+  document.querySelectorAll('.chip').forEach(b => b.classList.toggle('active', b.dataset.marka === marka));
+  updateAvailableYears();
+  document.querySelectorAll('.year-pill').forEach(p => p.classList.remove('active'));
   hideResult();
+  setTimeout(() => document.getElementById('yearField').scrollIntoView({behavior:'smooth', block:'nearest'}), 100);
 }
 
-function buildTipDropdown(marka) {
-  const sel = document.getElementById('tipSel');
-  sel.innerHTML = '';
-  if (!marka || !DB[marka]) {
-    sel.disabled = true;
-    const o = document.createElement('option');
-    o.textContent = '— Önce marka seçin —';
-    sel.appendChild(o);
-    return;
-  }
-  sel.disabled = false;
-  const placeholder = document.createElement('option');
-  placeholder.value = '';
-  placeholder.textContent = '— Model seçin —';
-  sel.appendChild(placeholder);
-  DB[marka].forEach(item => {
-    const o = document.createElement('option');
-    o.value = item.t;
-    o.textContent = item.t;
-    sel.appendChild(o);
-  });
-  sel.onchange = () => {
-    selectedTip = sel.value;
-    document.getElementById('manuelModel').value = sel.value;
-    checkBtn();
-    hideResult();
-    updateAvailableYears();
-  };
+function clearSelection() {
+  selectedMarka = '';
+  selectedTip = '';
+  selectedYear = '';
+  document.getElementById('unifiedSearch').value = '';
+  document.getElementById('selectedBar').style.display = 'none';
+  document.getElementById('yearField').style.display = 'none';
+  document.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.year-pill').forEach(p => p.classList.remove('active', 'disabled'));
+  hideResult();
 }
 
 function buildYearPills() {
@@ -580,8 +594,7 @@ function buildYearPills() {
       container.querySelectorAll('.year-pill').forEach(p => p.classList.remove('active'));
       pill.classList.add('active');
       selectedYear = String(y);
-      checkBtn();
-      hideResult();
+      showResult();
     });
     container.appendChild(pill);
   });
@@ -599,15 +612,9 @@ function updateAvailableYears() {
       if (pill.classList.contains('active')) {
         pill.classList.remove('active');
         selectedYear = '';
-        checkBtn();
       }
     }
   });
-}
-
-function checkBtn() {
-  const btn = document.getElementById('searchBtn');
-  btn.disabled = !(selectedMarka && selectedTip && selectedYear);
 }
 
 function hideResult() {
@@ -615,24 +622,35 @@ function hideResult() {
   document.getElementById('notFoundEl').classList.remove('show');
 }
 
-document.getElementById('searchBtn').addEventListener('click', () => {
-  const displayMarka = document.getElementById('manuelMarka').value.trim() || selectedMarka;
-  const displayModel = document.getElementById('manuelModel').value.trim() || selectedTip;
+function showResult() {
   const item = DB[selectedMarka]?.find(x => x.t === selectedTip);
   const value = item?.v?.[selectedYear];
   if (value) {
-    document.getElementById('resMarka').textContent = displayMarka;
-    document.getElementById('resTip').textContent = displayModel;
+    document.getElementById('resMarka').textContent = selectedMarka;
+    document.getElementById('resTip').textContent = selectedTip;
     document.getElementById('resYear').textContent = selectedYear + ' Model';
     document.getElementById('resValue').textContent = value.toLocaleString('tr-TR') + ' ₺';
+    document.getElementById('copyInput').value = selectedMarka + ' ' + selectedTip + ' ' + selectedYear + ' — ' + value.toLocaleString('tr-TR') + ' ₺ (TSB Kasko Değeri)';
     document.getElementById('resultCard').classList.add('show');
     document.getElementById('notFoundEl').classList.remove('show');
   } else {
     document.getElementById('resultCard').classList.remove('show');
     document.getElementById('notFoundEl').classList.add('show');
   }
-  document.getElementById('resultCard').scrollIntoView({behavior:'smooth', block:'nearest'});
-});
+  setTimeout(() => document.getElementById('resultCard').scrollIntoView({behavior:'smooth', block:'nearest'}), 50);
+}
+
+function copyResult() {
+  const input = document.getElementById('copyInput');
+  input.select();
+  input.setSelectionRange(0, 99999);
+  navigator.clipboard?.writeText(input.value).catch(() => { try { document.execCommand('copy'); } catch(e){} });
+  const btn = document.getElementById('copyBtn');
+  const ok = document.getElementById('copyOk');
+  btn.textContent = 'Kopyalandı!';
+  ok.style.display = 'block';
+  setTimeout(() => { btn.textContent = 'Kopyala'; ok.style.display = 'none'; }, 2000);
+}
 
 loadData();
 </script>
