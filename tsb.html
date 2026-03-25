@@ -238,12 +238,14 @@ select option{background:#0d1e30;color:#eef2f7;}
       overflow-y: auto;
     }
     .ac-list li {
-      padding: 10px 16px;
+      padding: 12px 16px;
       color: #e2e8f0;
       font-size: 14px;
       cursor: pointer;
+      border-bottom: 1px solid rgba(26,46,69,.5);
     }
-    .ac-list li:hover { background: #c9a84c22; color: #c9a84c; }
+    .ac-list li:last-child { border-bottom: none; }
+    .ac-list li:hover, .ac-list li.ac-active { background: #c9a84c22; color: #c9a84c; }
 
     /* Popular brands */
     .popular-section {
@@ -520,24 +522,63 @@ function setupUnifiedSearch() {
       allCombos.push({ marka, tip: item.t, label: (marka + ' ' + item.t).toUpperCase() });
     });
   });
-  input.addEventListener('input', () => {
-    const q = input.value.trim().toUpperCase();
+
+  let acIdx = -1;
+
+  function renderAC(q) {
     acList.innerHTML = '';
+    acIdx = -1;
     if (!q) { acList.style.display = 'none'; return; }
-    const matches = allCombos.filter(c => c.label.includes(q));
+    const tokens = q.split(/\s+/).filter(Boolean);
+    let matches = allCombos.filter(c => tokens.every(t => c.label.includes(t)));
+    matches.sort((a, b) => {
+      const as = a.label.startsWith(tokens[0]) ? 0 : 1;
+      const bs = b.label.startsWith(tokens[0]) ? 0 : 1;
+      return as - bs;
+    });
     if (matches.length === 0) { acList.style.display = 'none'; return; }
-    matches.slice(0, 15).forEach(c => {
+    matches.slice(0, 20).forEach((c, i) => {
       const li = document.createElement('li');
       li.textContent = c.marka + ' — ' + c.tip;
       const pick = () => selectVehicle(c.marka, c.tip);
       li.addEventListener('mousedown', e => { e.preventDefault(); pick(); });
-      li.addEventListener('touchstart', e => { e.preventDefault(); pick(); }, {passive:false});
+      li.addEventListener('touchstart', e => { e.preventDefault(); pick(); }, {passive: false});
       acList.appendChild(li);
     });
     acList.style.display = 'block';
+  }
+
+  input.addEventListener('input', () => {
+    renderAC(input.value.trim().toUpperCase());
   });
-  input.addEventListener('blur', () => { setTimeout(() => { acList.style.display = 'none'; }, 200); });
-  input.addEventListener('focus', () => { if (input.value.trim()) input.dispatchEvent(new Event('input')); });
+
+  input.addEventListener('keydown', e => {
+    const items = acList.querySelectorAll('li');
+    if (!items.length) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      acIdx = Math.min(acIdx + 1, items.length - 1);
+      items.forEach((li, i) => li.classList.toggle('ac-active', i === acIdx));
+      if (items[acIdx]) items[acIdx].scrollIntoView({block: 'nearest'});
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      acIdx = Math.max(acIdx - 1, 0);
+      items.forEach((li, i) => li.classList.toggle('ac-active', i === acIdx));
+      if (items[acIdx]) items[acIdx].scrollIntoView({block: 'nearest'});
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (acIdx >= 0 && items[acIdx]) {
+        items[acIdx].dispatchEvent(new MouseEvent('mousedown'));
+      } else if (items[0]) {
+        items[0].dispatchEvent(new MouseEvent('mousedown'));
+      }
+    } else if (e.key === 'Escape') {
+      acList.style.display = 'none';
+    }
+  });
+
+  input.addEventListener('blur', () => { setTimeout(() => { acList.style.display = 'none'; }, 180); });
+  input.addEventListener('focus', () => { if (input.value.trim()) renderAC(input.value.trim().toUpperCase()); });
 }
 
 function setupPopularChips() {
@@ -565,6 +606,20 @@ function selectVehicle(marka, tip) {
   document.getElementById('yearField').style.display = 'block';
   document.querySelectorAll('.chip').forEach(b => b.classList.toggle('active', b.dataset.marka === marka));
   updateAvailableYears();
+  // Otomatik en son yılı seç
+  const item = DB[marka]?.find(x => x.t === tip);
+  if (item) {
+    const availYears = Object.keys(item.v).map(Number).sort((a, b) => b - a);
+    if (availYears.length > 0) {
+      selectedYear = String(availYears[0]);
+      document.querySelectorAll('.year-pill').forEach(p => {
+        p.classList.toggle('active', p.dataset.year === selectedYear);
+      });
+      showResult();
+      setTimeout(() => document.getElementById('resultCard').scrollIntoView({behavior: 'smooth', block: 'nearest'}), 120);
+      return;
+    }
+  }
   document.querySelectorAll('.year-pill').forEach(p => p.classList.remove('active'));
   hideResult();
   setTimeout(() => document.getElementById('yearField').scrollIntoView({behavior:'smooth', block:'nearest'}), 100);
