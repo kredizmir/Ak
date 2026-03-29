@@ -333,13 +333,18 @@ select option{background:#0d1e30;color:#eef2f7;}
 .copy-ok{font-size:12px;color:#4ade80;margin-top:6px;display:none;text-align:center;letter-spacing:.5px;}
 
 /* Mobile improvements */
+@keyframes fadeIn{
+  from{opacity:0;transform:translateY(6px);}
+  to{opacity:1;transform:translateY(0);}
+}
+#yearField.animate-in,#resultCard.animate-in{animation:fadeIn .25s ease-out;}
 @media(max-width:480px){
   .main{padding:14px 10px;}
   .form-section{padding:14px;}
-  .year-pill{padding:10px 14px;font-size:14px;}
-  .chip{padding:8px 12px;font-size:12px;}
+  .year-pill{padding:13px 16px;font-size:14px;min-height:44px;}
+  .chip{padding:9px 14px;font-size:12px;}
   .result-value{font-size:28px;}
-  .ac-list li{padding:13px 16px;font-size:15px;}
+  .ac-list li{padding:15px 16px;font-size:15px;}
   .popular-chips{gap:6px;}
 }
 </style>
@@ -601,13 +606,19 @@ function selectVehicle(marka, tip) {
   selectedYear = '';
   document.getElementById('unifiedSearch').value = marka + ' — ' + tip;
   document.getElementById('acList').style.display = 'none';
+  document.getElementById('unifiedSearch').blur();
   document.getElementById('selectedBarText').textContent = marka + ' — ' + tip;
   document.getElementById('selectedBar').style.display = 'flex';
-  document.getElementById('yearField').style.display = 'block';
+  const yf = document.getElementById('yearField');
+  yf.style.display = 'block';
+  yf.classList.remove('animate-in');
+  void yf.offsetWidth;
+  yf.classList.add('animate-in');
   document.querySelectorAll('.chip').forEach(b => b.classList.toggle('active', b.dataset.marka === marka));
   document.querySelectorAll('.year-pill').forEach(p => p.classList.remove('active'));
   updateAvailableYears();
   hideResult();
+  setTimeout(() => yf.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
 }
 
 function clearSelection() {
@@ -671,13 +682,17 @@ function showResult() {
     document.getElementById('resYear').textContent = selectedYear + ' Model';
     document.getElementById('resValue').textContent = value.toLocaleString('tr-TR') + ' ₺';
     document.getElementById('copyInput').value = selectedMarka + ' ' + selectedTip + ' ' + selectedYear + ' — ' + value.toLocaleString('tr-TR') + ' ₺ (TSB Kasko Değeri)';
-    document.getElementById('resultCard').classList.add('show');
+    const rc = document.getElementById('resultCard');
+    rc.classList.add('show');
+    rc.classList.remove('animate-in');
+    void rc.offsetWidth;
+    rc.classList.add('animate-in');
     document.getElementById('notFoundEl').classList.remove('show');
+    setTimeout(() => rc.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
   } else {
     document.getElementById('resultCard').classList.remove('show');
     document.getElementById('notFoundEl').classList.add('show');
   }
-
 }
 
 function copyResult() {
